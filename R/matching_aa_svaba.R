@@ -140,8 +140,8 @@ matching_aa_svaba <- function(x, y){
   
   facing_aabp <- facing_aabp %>% mutate(bp_front_1coords = bp_front+1,
                                         bp_back_1coords = bp_back+1,
-                                        Svaba_bp = paste0(Chr_bp_front, ":", (bp_front+1)),
-                                        Svaba_bp_mate = paste0(Chr, ":", (bp_back+1)))
+                                        bp = paste0(Chr_bp_front, ":", (bp_front+1)),
+                                        bp_mate = paste0(Chr, ":", (bp_back+1)))
   
   # Extract contig info. from 'svaba.sv.vcf' 
   contig.svaba <- sapply(str_split(svaba_output$INFO, ";"), function(x){ x[grep("SCTG", x)] }) %>% 
@@ -188,8 +188,8 @@ matching_aa_svaba <- function(x, y){
     
     Matched_AA_Svaba <- rbind(Matched_AA_Svaba, merged_DF)
   }
-
-  colnames(Matched_AA_Svaba)[grep("\\...", colnames(Matched_AA_Svaba))] <- c("SCTG±1bp", "SCTG±10bp", "SCTG±100bp", "SCTG±500bp")
+  
+  colnames(Matched_AA_Svaba)[grep("\\...", colnames(Matched_AA_Svaba))] <- c("SCTG_1bp", "SCTG_10bp", "SCTG_100bp", "SCTG_500bp")
   
   return(Matched_AA_Svaba)
   
