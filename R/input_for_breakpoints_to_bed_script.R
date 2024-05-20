@@ -29,6 +29,7 @@ write_tsv(data.frame(rep(opt$aliquot_barcode, length(cycle_path)),
 # this is for option '-r' in 'breakpoints_to_bed.py'
 aa_summary_file <- list.files(opt$aa_output_path,
                             pattern = '_summary.txt$', recursive = TRUE, full.names = TRUE) %>% 
+  .[str_detect(., "_AA_results")] %>% 
   lapply(., function(x){read_tsv(x, col_names=F)})
 
 
