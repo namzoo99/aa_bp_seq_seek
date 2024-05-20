@@ -1,0 +1,11 @@
+./:
+total 32
+drwx------   2 mary mary     4096 May 20 23:39 .
+drwxrwxr-x 240 root hoonlab 12288 May 20 23:39 ..
+-rw-rw-r--   1 mary mary     1555 May 20 23:39 .command.err
+-rw-rw-r--   1 mary mary        0 May 20 23:39 .command.out
+-rw-rw-r--   1 mary mary        0 May 20 23:39 .command.trace
+-rw-rw-r--   1 mary mary        0 May 20 23:39 make_input_for_breakpoints_to_bed_env.txt
+lrwxrwxrwx   1 mary mary       27 May 20 23:39 nextflow -> /home/mary/HL-NF/R/nextflow
+-rw-rw-r--   1 mary mary      429 May 20 23:39 SKKURT-320DM-0001-TPX-A01-WGS-2OJ361_aa_summary_intervals.txt
+-rw-rw-r--   1 mary mary     5850 May 20 23:39 SKKURT-320DM-0001-TPX-A01-WGS-2OJ361_bp.input.txt
