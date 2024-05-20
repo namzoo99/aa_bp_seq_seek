@@ -19,12 +19,12 @@ opt = parse_args(OptionParser(option_list=option_list))
 #       input
 # 
 ################################################################################
-# output of 'process test3'
+# output of 'process get_aa_bp'
 bp.input_breakpoints <- read_tsv(opt$breakpoints_bed,
                                  col_names = FALSE)
 
 
-# directory 'cycle / annotated cycle' file
+# directory of 'cycles.txt' and 'annotated_cycles.txt' file
 all_cycle_file_list <- list.files(opt$aa_output_path,
                                   pattern = "_cycles.txt", recursive = TRUE, full.names = TRUE) %>%
   .[str_detect(., paste(unique(bp.input_breakpoints$X6), collapse = "|"))] %>% 
@@ -45,7 +45,7 @@ svaba.unfiltered.sv.vcf <- read_tsv(opt$svaba_unfiltered_sv_vcf,
 # 'Start' and 'End' columns reflect direction info. of segments(- or +)
 # 
 ################################################################################
-# Split 'annotated_cycle' file and 'cycle' file
+# Split 'annotated_cycles.txt' and 'cycles.txt' file
 annotated_cycle <- all_cycle_file_list[str_detect(all_cycle_file_list, "_annotated_cycles.txt")] %>%
   map_df(~read_tsv(., id = "file_name", col_names=FALSE))
 
@@ -53,7 +53,7 @@ cycle <- all_cycle_file_list[!str_detect(all_cycle_file_list, "_annotated_cycles
   map_df(~read_tsv(., id = "file_name", col_names=FALSE, col_types = "cccccc"))
 
 
-# edit annotated cycle file 
+# edit 'annotated_cycles.txt file 
 edited_annotated_cycle <- annotated_cycle %>% .[str_detect(.$X1, "Cycle="),] %>% 
   separate(., col=X1,
            into = c("Cycle", "Copy_count", "Length", "IsCyclicPath", "CycleClass", "Segments"),
@@ -72,7 +72,7 @@ annotated_cycle_SegInfo <- annotated_cycle %>% .[str_detect(.$X1, "Segment\t"),]
 annotated_cycle_bp <- left_join(edited_annotated_cycle, annotated_cycle_SegInfo %>% select(-Segments), by=c("abs_Segments", "file_name"))
 
 
-# edit cycle file 
+# edit 'cycles.txt file 
 edited_cycle <- cycle %>% .[str_detect(.$X1, "Cycle="),] %>% 
   separate(., col=X1,
            into = c("Cycle", "Copy_count", "Segments"),
@@ -140,8 +140,8 @@ matching_aa_svaba <- function(x, y){
   
   facing_aabp <- facing_aabp %>% mutate(bp_front_1coords = bp_front+1,
                                         bp_back_1coords = bp_back+1,
-                                        bp = paste0(Chr_bp_front, ":", (bp_front+1)),
-                                        bp_mate = paste0(Chr, ":", (bp_back+1)))
+                                        Svaba_bp = paste0(Chr_bp_front, ":", (bp_front+1)),
+                                        Svaba_bp_mate = paste0(Chr, ":", (bp_back+1)))
   
   # Extract contig info. from 'svaba.sv.vcf' 
   contig.svaba <- sapply(str_split(svaba_output$INFO, ";"), function(x){ x[grep("SCTG", x)] }) %>% 
@@ -188,7 +188,7 @@ matching_aa_svaba <- function(x, y){
     
     Matched_AA_Svaba <- rbind(Matched_AA_Svaba, merged_DF)
   }
-  
+
   colnames(Matched_AA_Svaba)[grep("\\...", colnames(Matched_AA_Svaba))] <- c("SCTG_1bp", "SCTG_10bp", "SCTG_100bp", "SCTG_500bp")
   
   return(Matched_AA_Svaba)
