@@ -8,7 +8,7 @@ workflow
 =================================================================
 */
 
-workflow bp_seq_seek {
+workflow aa_bp_seq_seek {
 
 	take:
         aligned_bams
@@ -41,14 +41,16 @@ workflow bp_seq_seek {
 						  return(aliquot)}
 		//OUTPUT: aliquot
 
+		
+		// process order: 1 -> 2-1 or 2-2 -> 3 -> 4 -> 5 -> 6
 
 		// process 1
         count_aa_amp_num(ch_input)
 
 
 		// process 2-1 or 2-2
-		amp = count_aa_amp_num.out.map{ aliquot, amp_num_txt, amp_num, cmds ->
-							     return[aliquot,              amp_num] }
+		amp = count_aa_amp_num.out.map{ aliquot, aa_sum_file_path_txt, amp_num_txt, amp_num, cmds ->
+							     return[aliquot,             					    amp_num] }
         no_aa_amp(amp)
 		make_input_for_breakpoints_to_bed(amp, R_ch)
     	
@@ -82,7 +84,7 @@ workflow bp_seq_seek {
              								 ch_genome_alt, ch_svaba_dbsnp_vcf)
 
 
-	    // process 6
+	    // process 6 (preliminary process)
 	    input_align_aa_bp_to_svaba = output_breakpoints_to_bed
         														 .combine(run_svaba_ss_targeted_local_assembly.out, by:0)
         														 .map{ aliquot, bp_bed, amp_num, svaba_sv_vcf, svaba_unfiltered_sv_vcf, svaba_output, env ->
@@ -111,29 +113,28 @@ Define processes
 //
 //
 // --------------------------------------------------------------
-
 process count_aa_amp_num {
 	
 	tag "${aliquot_barcode}"
 
-	publishDir "${params.scratch_dir}/results/${params.workflow_name}/${params.genome}/${aliquot_barcode}/aa_amp_num", pattern: "*", mode: 'copy'
+	publishDir "${params.scratch_dir}/results/${params.workflow_name}/${params.aa_workflow}/${params.aasuite_ver}/${params.genome}/minCN${params.aa_gain}/cnsizeMin${params.aa_cnsize_min}/${params.aa_downsample}X/${aliquot_barcode}/aa_amp_num", pattern: "*", mode: 'copy'
 
 	input: 
 		val(aliquot_barcode)
 
 	output:
-		tuple val(aliquot_barcode), path("amplicon_num.txt"), env(amp_num), path("*{command,exitcode}*",hidden:true)
+		tuple val(aliquot_barcode), path("aa_summary_file_path.txt"), path("amplicon_num.txt"), env(amp_num), path("*{command,exitcode}*",hidden:true)
 
-	script:
+	shell:
 
-		"""
-		#!/bin/bash
+		'''
 
-		head ${params.scratch_dir}/results/*/minCN${params.aa_gain}/cnsizeMin${params.aa_cnsize_min}/${params.aa_downsample}X/aasuit_bam/${aliquot_barcode}/aasuit_bam_dir/${aliquot_barcode}_AA_results/${aliquot_barcode}_summary.txt -n 1 | cut -d " " -f3 > ./amplicon_num.txt
-		
+		find  !{params.scratch_dir}/results/!{params.aa_workflow}/!{params.aasuite_ver}/!{params.genome}/minCN!{params.aa_gain}/cnsizeMin!{params.aa_cnsize_min}/!{params.aa_downsample}X/calls/!{aliquot_barcode} -type f -name "!{aliquot_barcode}_summary.txt" > ./aa_summary_file_path.txt
+		cat ./aa_summary_file_path.txt | xargs -I{} sh -c 'head $0 -n 1 | cut -d " " -f3 > ./amplicon_num.txt' {} ;
+
 		amp_num=`cat ./amplicon_num.txt`
 
-		"""
+		'''
 
 }
 
@@ -141,7 +142,7 @@ process no_aa_amp {
 	
 	tag "${aliquot_barcode}"
 
-	publishDir "${params.scratch_dir}/results/${params.workflow_name}/${params.genome}/${aliquot_barcode}", pattern: "*", mode: 'copy'
+	publishDir "${params.scratch_dir}/results/${params.workflow_name}/${params.aa_workflow}/${params.aasuite_ver}/${params.genome}/minCN${params.aa_gain}/cnsizeMin${params.aa_cnsize_min}/${params.aa_downsample}X/${aliquot_barcode}", pattern: "*", mode: 'copy'
 
 	input: 
 		tuple val(aliquot_barcode), val(amp_num)
@@ -164,20 +165,21 @@ process no_aa_amp {
 
 }
 
+
 process make_input_for_breakpoints_to_bed {
 	
 	tag "${aliquot_barcode}"
 
-	publishDir "${params.scratch_dir}/results/${params.workflow_name}/${params.genome}/${aliquot_barcode}/get_aa_bp", pattern: "*", mode: 'copy'
+	publishDir "${params.scratch_dir}/results/${params.workflow_name}/${params.aa_workflow}/${params.aasuite_ver}/${params.genome}/minCN${params.aa_gain}/cnsizeMin${params.aa_cnsize_min}/${params.aa_downsample}X/${aliquot_barcode}/get_aa_bp", pattern: "*", mode: 'copy'
 
-	label "bp_seq_seek"
+	label "aa_bp_seq_seek"
 
 	input: 
 		tuple val(aliquot_barcode), val(amp_num)
 		file(R_dir)
 
 	output:
-		tuple val(aliquot_barcode), path("${aliquot_barcode}_bp.input.txt"), path("${aliquot_barcode}_aa_summary_intervals.txt"), path("env.txt"), path("*{command,exitcode}*",hidden:true)
+		tuple val(aliquot_barcode), path("${aliquot_barcode}_bp.input.txt"), path("${aliquot_barcode}_aa_summary_intervals.txt"), path("*env.txt"), path("*{command,exitcode}*",hidden:true)
 	
 	when:
 		amp_num != "0"
@@ -188,10 +190,10 @@ process make_input_for_breakpoints_to_bed {
 		#!/bin/bash
 
 			Rscript ${R_dir}/input_for_breakpoints_to_bed_script.R \
-		    --aa_output_path ${params.scratch_dir}/results/*/minCN${params.aa_gain}/cnsizeMin${params.aa_cnsize_min}/${params.aa_downsample}X/aasuit_bam/${aliquot_barcode}/aasuit_bam_dir/${aliquot_barcode}_AA_results \
+		    --aa_output_path ${params.scratch_dir}/results/${params.aa_workflow}/${params.aasuite_ver}/${params.genome}/minCN${params.aa_gain}/cnsizeMin${params.aa_cnsize_min}/${params.aa_downsample}X/calls/${aliquot_barcode} \
 			--aliquot_barcode ${aliquot_barcode} \
 		 	--output_path ./ && \
-		 	ls -al -R ./ >> env.txt
+		 	ls -al -R ./ >> make_input_for_breakpoints_to_bed_env.txt
 
 		"""
 
@@ -201,7 +203,7 @@ process get_aa_bp {
 	
 	tag "${aliquot_barcode}"
 
-	publishDir "${params.scratch_dir}/results/${params.workflow_name}/${params.genome}/${aliquot_barcode}/get_aa_bp", pattern: "*", mode: 'copy'
+	publishDir "${params.scratch_dir}/results/${params.workflow_name}/${params.aa_workflow}/${params.aasuite_ver}/${params.genome}/minCN${params.aa_gain}/cnsizeMin${params.aa_cnsize_min}/${params.aa_downsample}X/${aliquot_barcode}/get_aa_bp", pattern: "*", mode: 'copy'
 
 	label "get_aa_bp"
 
@@ -209,7 +211,7 @@ process get_aa_bp {
 		tuple val(aliquot_barcode), path(bpinput_txt), path(aainterval_txt), val(amp_num)
 
 	output:
-		tuple val(aliquot_barcode), path("${aliquot_barcode}_bp.input_breakpoints.bed"), path("env.txt"), path("*{command,exitcode}*",hidden:true)
+		tuple val(aliquot_barcode), path("${aliquot_barcode}_bp.input_breakpoints.bed"), path("*env.txt"), path("*{command,exitcode}*",hidden:true)
 	
 	when:
 		amp_num != "0"
@@ -224,7 +226,7 @@ process get_aa_bp {
 		python3 /home/breakpoints_to_bed.py \
 		-i ${bpinput_txt} \
         -r \$aainterval --add_chr_tag && \
-        ls -al -R ./ >> env.txt
+        ls -al -R ./ >> get_aa_bp_env.txt
 
 		"""
 
@@ -234,16 +236,16 @@ process convert_aa_bp_to_svaba_target_bed {
 	
 	tag "${aliquot_barcode}"
 
-	publishDir "${params.scratch_dir}/results/${params.workflow_name}/${params.genome}/${aliquot_barcode}/get_aa_bp", pattern: "*", mode: 'copy'
+	publishDir "${params.scratch_dir}/results/${params.workflow_name}/${params.aa_workflow}/${params.aasuite_ver}/${params.genome}/minCN${params.aa_gain}/cnsizeMin${params.aa_cnsize_min}/${params.aa_downsample}X/${aliquot_barcode}/get_aa_bp", pattern: "*", mode: 'copy'
 
-	label "bp_seq_seek"
+	label "aa_bp_seq_seek"
 
 	input:
 		tuple val(aliquot_barcode), path(bp_bed), val(amp_num)
 		file(R_dir)
 
 	output:
-		tuple val(aliquot_barcode), path("${aliquot_barcode}_aa_1kb_bp_svaba_input.bed"), path("env.txt"), path("*{command,exitcode}*",hidden:true)
+		tuple val(aliquot_barcode), path("${aliquot_barcode}_aa_1kb_bp_svaba_input.bed"), path("*env.txt"), path("*{command,exitcode}*",hidden:true)
 	
 	when:
 		amp_num != "0"
@@ -257,7 +259,7 @@ process convert_aa_bp_to_svaba_target_bed {
 		    --breakpoints_bed ${bp_bed} \
 			--aliquot_barcode ${aliquot_barcode} \
 		 	--output_path ./ && \
-		 	ls -al -R ./ >> env.txt
+		 	ls -al -R ./ >> convert_aa_bp_to_svaba_target_bed_env.txt
 
 		"""
 
@@ -267,7 +269,7 @@ process run_svaba_ss_targeted_local_assembly {
 	
 	tag "${aliquot_barcode}"
 
-	publishDir "${params.scratch_dir}/results/${params.workflow_name}/${params.genome}/${aliquot_barcode}/svaba_ss/local_assembly", pattern: "*", mode: 'copy'
+	publishDir "${params.scratch_dir}/results/${params.workflow_name}/${params.aa_workflow}/${params.aasuite_ver}/${params.genome}/minCN${params.aa_gain}/cnsizeMin${params.aa_cnsize_min}/${params.aa_downsample}X/${aliquot_barcode}/svaba_ss/local_assembly", pattern: "*", mode: 'copy'
 
 	label "svaba"
 
@@ -311,9 +313,9 @@ process align_aa_bp_to_svaba {
 	
 	tag "${aliquot_barcode}"
 
-	publishDir "${params.scratch_dir}/results/${params.workflow_name}/${params.genome}/${aliquot_barcode}/align_aa_bp_to_svaba", pattern: "*", mode: 'copy'
+	publishDir "${params.scratch_dir}/results/${params.workflow_name}/${params.aa_workflow}/${params.aasuite_ver}/${params.genome}/minCN${params.aa_gain}/cnsizeMin${params.aa_cnsize_min}/${params.aa_downsample}X/${aliquot_barcode}/align_aa_bp_to_svaba", pattern: "*", mode: 'copy'
 
-	label "bp_seq_seek"
+	label "aa_bp_seq_seek"
 
 	input:
 		tuple val(aliquot_barcode), path(bp_bed), val(amp_num), path(svaba_sv_vcf), path(svaba_unfiltered_sv_vcf)
@@ -332,7 +334,7 @@ process align_aa_bp_to_svaba {
     	
     		Rscript ${R_dir}/matching_aa_svaba.R \
 		    --breakpoints_bed ${bp_bed} \
-		    --aa_output_path ${params.scratch_dir}/results/*/minCN${params.aa_gain}/cnsizeMin${params.aa_cnsize_min}/${params.aa_downsample}X/aasuit_bam/${aliquot_barcode}/aasuit_bam_dir \
+		    --aa_output_path ${params.scratch_dir}/results/${params.aa_workflow}/${params.aasuite_ver}/${params.genome}/minCN${params.aa_gain}/cnsizeMin${params.aa_cnsize_min}/${params.aa_downsample}X/calls/${aliquot_barcode} \
 		    --svaba_sv_vcf ${svaba_sv_vcf} \
 		    --svaba_unfiltered_sv_vcf ${svaba_unfiltered_sv_vcf} \
 			--aliquot_barcode ${aliquot_barcode} \
@@ -342,6 +344,7 @@ process align_aa_bp_to_svaba {
     	"""
 
 }
+
 
 /* 
 =================================================================
