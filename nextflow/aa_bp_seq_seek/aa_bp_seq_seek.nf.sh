@@ -48,7 +48,7 @@ workflow aa_bp_seq_seek {
         count_aa_amp_num(ch_input)
 
 
-		// process 2-1 or 2-2
+		// process 2-1(amplicon exist) or 2-2(amplicon not exist)
 		amp = count_aa_amp_num.out.map{ aliquot, aa_sum_file_path_txt, amp_num_txt, amp_num, cmds ->
 							     return[aliquot,             					    amp_num] }
         no_aa_amp(amp)
