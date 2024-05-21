@@ -198,7 +198,7 @@ matching_aa_svaba <- function(x, y){
 Matched_annotated_cycle_Svaba <- matching_aa_svaba(annotated_cycle_bp, svaba.sv.vcf)
 Matched_cycle_Svaba <- matching_aa_svaba(cycle_bp, svaba.sv.vcf)
 
-Matched_annotated_cycle_Svaba_unfiltered <-  matching_aa_svaba(cycle_bp, svaba.unfiltered.sv.vcf)
+Matched_annotated_cycle_Svaba_unfiltered <-  matching_aa_svaba(annotated_cycle_bp, svaba.unfiltered.sv.vcf)
 Matched_cycle_Svaba_unfiltered <- matching_aa_svaba(cycle_bp, svaba.unfiltered.sv.vcf)
 
 
