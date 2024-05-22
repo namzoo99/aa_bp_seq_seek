@@ -42,13 +42,13 @@ workflow aa_bp_seq_seek {
 		//OUTPUT: aliquot
 
 		
-		// process order: 1 -> 2-1 or 2-2 -> 3 -> 4 -> 5 -> 6
+		// process order: 1 & 7 -> 2-1 or 2-2 -> 3 -> 4 -> 5 -> 6
 
 		// process 1
         count_aa_amp_num(ch_input)
 
 
-		// process 2-1(amplicon exist) or 2-2(amplicon not exist)
+		// process 2-1 or 2-2
 		amp = count_aa_amp_num.out.map{ aliquot, aa_sum_file_path_txt, amp_num_txt, amp_num, cmds ->
 							     return[aliquot,             					    amp_num] }
         no_aa_amp(amp)
@@ -92,6 +92,9 @@ workflow aa_bp_seq_seek {
         
         align_aa_bp_to_svaba(input_align_aa_bp_to_svaba, R_ch)
 
+        // process 7
+		copy_script(ch_input, R_ch)
+		
 }
 
 
@@ -340,6 +343,36 @@ process align_aa_bp_to_svaba {
 			--aliquot_barcode ${aliquot_barcode} \
 		 	--output_path ./ && \
 		 	ls -al -R ./ >> env.txt
+
+    	"""
+
+}
+
+process copy_script {
+	
+	tag "${aliquot_barcode}"
+
+	publishDir "${params.scratch_dir}/results/${params.workflow_name}/${params.aa_workflow}/${params.aasuite_ver}/${params.genome}/minCN${params.aa_gain}/cnsizeMin${params.aa_cnsize_min}/${params.aa_downsample}X/${aliquot_barcode}/scripts", pattern: "*", mode: 'copy'
+
+	input:
+		val(aliquot_barcode)
+		file(R_dir)
+
+	output:
+		tuple val(aliquot_barcode), path("*"), path("*{command,exitcode}*",hidden:true)
+	
+	when:
+		amp_num != "0"
+	
+	script:
+
+		"""
+    	#!/bin/bash
+    	
+    		cp ${R_dir}/input_for_breakpoints_to_bed_script.R ./`date +%Y.%m.%d`_input_for_breakpoints_to_bed_script.R && \
+    		cp ${R_dir}/input_for_svaba.R ./`date +%Y.%m.%d`_input_for_svaba.R && \
+    		cp ${R_dir}/matching_aa_svaba.R ./`date +%Y.%m.%d`_matching_aa_svaba.R && \
+    		cp ${params.nf_home}/nfs/aa_bp_seq_seek/${params.step}.nf.sh ./`date +%Y.%m.%d`_${params.step}.nf.sh
 
     	"""
 
