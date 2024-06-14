@@ -132,7 +132,7 @@ process count_aa_amp_num {
 
 		'''
 
-		find  !{params.scratch_dir}/results/!{params.aa_workflow}/!{params.aasuite_ver}/!{params.genome}/minCN!{params.aa_gain}/cnsizeMin!{params.aa_cnsize_min}/!{params.aa_downsample}X/calls/!{aliquot_barcode} -type f -name "!{aliquot_barcode}_summary.txt" > ./aa_summary_file_path.txt
+		find  !{params.scratch_dir}/results/!{params.aa_workflow}/!{params.aasuite_ver}/!{params.genome}/minCN!{params.aa_gain}/cnsizeMin!{params.aa_cnsize_min}/!{params.aa_downsample}X/calls/!{aliquot_barcode}/ -name "!{aliquot_barcode}_summary.txt" > ./aa_summary_file_path.txt
 		cat ./aa_summary_file_path.txt | xargs -I{} sh -c 'head $0 -n 1 | cut -d " " -f3 > ./amplicon_num.txt' {} ;
 
 		amp_num=`cat ./amplicon_num.txt`
