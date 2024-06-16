@@ -290,7 +290,7 @@ process run_svaba_ss_targeted_local_assembly {
         file(svaba_dbsnp_vcf)
 
 	output:
-		tuple val(aliquot_barcode), path("*.svaba.sv.vcf"), path("*unfiltered.sv.vcf"), path("*{.svaba.indel.vcf,txt.gz,contigs.bam,log}"), path("env.txt") 
+		tuple val(aliquot_barcode), path("*.svaba.sv.vcf"), path("*unfiltered.sv.vcf"), path("*{.svaba.indel.vcf,.unfiltered.indel.vcf,txt.gz,contigs.bam,log}"), path("env.txt") 
 	
 	when:
 		amp_num != "0"
