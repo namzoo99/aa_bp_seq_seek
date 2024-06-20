@@ -50,24 +50,22 @@ workflow aa_bp_seq_seek {
 
 		// process 2-1 or 2-2
 		amp = count_aa_amp_num.out.map{ aliquot, aa_sum_file_path_txt, amp_num_txt, amp_num, cmds ->
-							     return[aliquot,             					    amp_num] }
+							    return[ aliquot,             					    amp_num ] }
         no_aa_amp(amp)
 		make_input_for_breakpoints_to_bed(amp, R_ch)
     	
 
 		// process 3
 		input_breakpoints_to_bed = make_input_for_breakpoints_to_bed.out
-																	.combine(amp, by:0)
-																	.map{ aliquot, bpinput_txt, aainterval_txt, env, cmds, amp_num  -> 
-									 							   return[aliquot, bpinput_txt, aainterval_txt,            amp_num  ]}
+																	.map{ aliquot, bpinput_txt, aainterval_txt, env, cmds -> 
+									 							  return[ aliquot, bpinput_txt, aainterval_txt ]}
         get_aa_bp(input_breakpoints_to_bed)
 
 
         // process 4
         output_breakpoints_to_bed = get_aa_bp.out
-    								   	     .combine(amp, by:0)
-    										 .map{ aliquot, bp_bed, env, cmds, amp_num -> 
-    									  return [ aliquot, bp_bed,            amp_num] }
+    										 .map{ aliquot, bp_bed, env, cmds -> 
+    									  return [ aliquot, bp_bed ]}
 
         convert_aa_bp_to_svaba_target_bed(output_breakpoints_to_bed, R_ch)
 
@@ -75,9 +73,8 @@ workflow aa_bp_seq_seek {
         // process 5
         input_svaba_local_assembly = ch_samples
     		    							   .combine(convert_aa_bp_to_svaba_target_bed.out, by:0)
-    		    							   .combine(amp, by:0)
-											   .map{aliquot, bam, bai, aa_1kb_bp_svaba_input_bed, env, cmds, amp_num ->
-			 							     return[aliquot, bam, bai, aa_1kb_bp_svaba_input_bed,            amp_num] }
+											   .map{ aliquot, bam, bai, aa_1kb_bp_svaba_input_bed, env, cmds->
+			 							     return[ aliquot, bam, bai, aa_1kb_bp_svaba_input_bed ]}
 	    
 	    run_svaba_ss_targeted_local_assembly(input_svaba_local_assembly, ch_genome_fasta, ch_genome_index, ch_genome_dict,
              								 ch_genome_sa, ch_genome_bwt, ch_genome_ann, ch_genome_amb, ch_genome_pac,
@@ -87,8 +84,8 @@ workflow aa_bp_seq_seek {
 	    // process 6 (preliminary process)
 	    input_align_aa_bp_to_svaba = output_breakpoints_to_bed
         														 .combine(run_svaba_ss_targeted_local_assembly.out, by:0)
-        														 .map{ aliquot, bp_bed, amp_num, svaba_sv_vcf, svaba_unfiltered_sv_vcf, svaba_output, env ->
-              												   return [aliquot, bp_bed, amp_num, svaba_sv_vcf, svaba_unfiltered_sv_vcf]}
+        														 .map{ aliquot, bp_bed, svaba_sv_vcf, svaba_unfiltered_sv_vcf, svaba_output, env ->
+              											      return [ aliquot, bp_bed, svaba_sv_vcf, svaba_unfiltered_sv_vcf ]}
         
         align_aa_bp_to_svaba(input_align_aa_bp_to_svaba, R_ch)
 
@@ -211,13 +208,11 @@ process get_aa_bp {
 	label "get_aa_bp"
 
 	input:
-		tuple val(aliquot_barcode), path(bpinput_txt), path(aainterval_txt), val(amp_num)
+		tuple val(aliquot_barcode), path(bpinput_txt), path(aainterval_txt)
 
 	output:
 		tuple val(aliquot_barcode), path("${aliquot_barcode}_bp.input_breakpoints.bed"), path("*env.txt"), path("*{command,exitcode}*",hidden:true)
 	
-	when:
-		amp_num != "0"
 	
 	script:
 
@@ -244,14 +239,14 @@ process convert_aa_bp_to_svaba_target_bed {
 	label "aa_bp_seq_seek"
 
 	input:
-		tuple val(aliquot_barcode), path(bp_bed), val(amp_num)
+		tuple val(aliquot_barcode), path(bp_bed)
 		file(R_dir)
 
 	output:
 		tuple val(aliquot_barcode), path("${aliquot_barcode}_aa_1kb_bp_svaba_input.bed"), path("*env.txt"), path("*{command,exitcode}*",hidden:true)
 	
 	when:
-		amp_num != "0"
+		bp_bed.size() > 0
 	
 	script:
 
@@ -277,7 +272,7 @@ process run_svaba_ss_targeted_local_assembly {
 	label "svaba"
 
 	input:
-		tuple val(aliquot_barcode), path(bam), path(bai), path(aa_1kb_bp_svaba_input_bed), val(amp_num)
+		tuple val(aliquot_barcode), path(bam), path(bai), path(aa_1kb_bp_svaba_input_bed)
 		file(genome_fasta)
         file(genome_index)
         file(genome_fasta_dict)
@@ -290,10 +285,8 @@ process run_svaba_ss_targeted_local_assembly {
         file(svaba_dbsnp_vcf)
 
 	output:
-		tuple val(aliquot_barcode), path("*.svaba.sv.vcf"), path("*unfiltered.sv.vcf"), path("*{.svaba.indel.vcf,.unfiltered.indel.vcf,txt.gz,contigs.bam,log}"), path("env.txt") 
-	
-	when:
-		amp_num != "0"
+		tuple val(aliquot_barcode), path("*.svaba.sv.vcf"), path("*unfiltered.sv.vcf"), path("*{.svaba.indel.vcf,txt.gz,contigs.bam,log}"), path("env.txt") 
+
 	
 	script:
 		"""
@@ -321,14 +314,12 @@ process align_aa_bp_to_svaba {
 	label "aa_bp_seq_seek"
 
 	input:
-		tuple val(aliquot_barcode), path(bp_bed), val(amp_num), path(svaba_sv_vcf), path(svaba_unfiltered_sv_vcf)
+		tuple val(aliquot_barcode), path(bp_bed), path(svaba_sv_vcf), path(svaba_unfiltered_sv_vcf)
 		file(R_dir)
 
 	output:
 		tuple val(aliquot_barcode), path("*.tsv"), path("env.txt"), path("*{command,exitcode}*",hidden:true)
 	
-	when:
-		amp_num != "0"
 	
 	script:
 
@@ -415,5 +406,3 @@ def make_samples ( ch_aligned_bams, dna_legacy_file_sheet  ) {
 
         
 }
-
-
