@@ -158,7 +158,7 @@ process no_aa_amp {
 		"""
 		#!/bin/bash
 
-		touch no_amplicon
+		touch no_amplicon_flag
 
 		"""
 		
