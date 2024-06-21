@@ -42,7 +42,7 @@ workflow aa_bp_seq_seek {
 		//OUTPUT: aliquot
 
 		
-		// process order: 1 & 7 -> 2-1 or 2-2 -> 3 -> 4 -> 5 -> 6
+		// process order: 1 & 7 -> 2-1 or 2-2 -> 3 -> 4-1 or 4-2 -> 5 -> 6
 
 		// process 1
         count_aa_amp_num(ch_input)
@@ -62,12 +62,13 @@ workflow aa_bp_seq_seek {
         get_aa_bp(input_breakpoints_to_bed)
 
 
-        // process 4
+        // process 4-1 or 4-2
         output_breakpoints_to_bed = get_aa_bp.out
     										 .map{ aliquot, bp_bed, env, cmds -> 
     									  return [ aliquot, bp_bed ]}
 
         convert_aa_bp_to_svaba_target_bed(output_breakpoints_to_bed, R_ch)
+		no_aa_bp(output_breakpoints_to_bed)
 
 
         // process 5
@@ -148,7 +149,7 @@ process no_aa_amp {
 		tuple val(aliquot_barcode), val(amp_num)
 
 	output:
-		tuple val(aliquot_barcode), path(no_amplicon), path("*{command,exitcode}*",hidden:true)
+		tuple val(aliquot_barcode), path(no_amplicon_flag), path("*{command,exitcode}*",hidden:true)
 	
 	when:
 		amp_num == "0"
@@ -258,6 +259,32 @@ process convert_aa_bp_to_svaba_target_bed {
 			--aliquot_barcode ${aliquot_barcode} \
 		 	--output_path ./ && \
 		 	ls -al -R ./ >> convert_aa_bp_to_svaba_target_bed_env.txt
+
+		"""
+
+}
+
+process no_aa_bp {
+	
+	tag "${aliquot_barcode}"
+
+	publishDir "${params.scratch_dir}/results/${params.workflow_name}/${params.aa_workflow}/${params.aasuite_ver}/${params.genome}/minCN${params.aa_gain}/cnsizeMin${params.aa_cnsize_min}/${params.aa_downsample}X/${aliquot_barcode}", pattern: "*", mode: 'copy'
+
+	input:
+		tuple val(aliquot_barcode), path(bp_bed)
+
+	output:
+		tuple val(aliquot_barcode), path(no_aa_bp_flag), path("*{command,exitcode}*",hidden:true)
+	
+	when:
+		bp_bed.size() == 0
+	
+	script:
+
+		"""
+		#!/bin/bash
+
+		touch no_aa_bp_flag
 
 		"""
 
