@@ -32,12 +32,25 @@ all_cycle_file_list <- list.files(opt$aa_output_path,
 
 
 # svaba output
-svaba.sv.vcf <- read_tsv(opt$svaba_sv_vcf, 
-                         skip = 144)
+svaba.sv.vcf <- read_tsv(opt$svaba_sv_vcf, col_names = FALSE) %>%
+  .[!str_detect(.$X1, "##"),]
 
-svaba.unfiltered.sv.vcf <- read_tsv(opt$svaba_unfiltered_sv_vcf, 
-                                    skip = 144)
+svaba.unfiltered.sv.vcf <- read_tsv(opt$svaba_unfiltered_sv_vcf, col_names = FALSE) %>%
+  .[!str_detect(.$X1, "##"),]
 
+################################################################################
+#
+# Edit svaba output file
+#
+#
+################################################################################
+svaba.sv.vcf <- separate(svaba.sv.vcf,
+         col=X1,
+         into=unlist(str_split(svaba.sv.vcf[1,]$X1, "\t")), sep = "\t") %>% .[-1,]
+
+svaba.unfiltered.sv.vcf <- separate(svaba.unfiltered.sv.vcf,
+         col=X1,
+         into=unlist(str_split(svaba.unfiltered.sv.vcf[1,]$X1, "\t")), sep = "\t") %>% .[-1,]
 
 ################################################################################
 #
